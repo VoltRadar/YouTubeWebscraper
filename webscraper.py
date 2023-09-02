@@ -126,8 +126,8 @@ class YoutubeWebscraper:
     def scrap_titles(self, youtuber):
         url = "https://www.youtube.com/@" + youtuber[1] + "/videos"
         self.load_driver()
-        self.load_page(url)
 
+        self.load_page(url)
         self.click_reject_all()
         self.get_video_titles(youtuber[0])
         self.save_video_titles()
