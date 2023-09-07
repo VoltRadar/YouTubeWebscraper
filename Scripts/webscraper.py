@@ -1,7 +1,7 @@
 import datetime
 import json
+import os
 import time
-import traceback
 
 # All selenium imports
 from selenium import webdriver
@@ -10,9 +10,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 # Locations contains the locations for any elements on the YouTube page
-from YoutubeLocations import Locations
+from Scripts.YoutubeLocations import Locations
 
-from Youtubers import Youtubers
+# Names of youtubers
+from Scripts.Youtubers import Youtubers
 
 
 class YoutubeWebscraper:
@@ -20,6 +21,7 @@ class YoutubeWebscraper:
     Webscraper for youtube to get some minor information
     """
     def __init__(self):
+
         self.driver: webdriver = None
 
         # Dictionary of youtuber titles, keys are youtuber name, and values are a list of titles
@@ -43,7 +45,7 @@ class YoutubeWebscraper:
                 EC.presence_of_element_located(location)
             )
             return element
-        except TimeoutError as e:
+        except TimeoutError:
             print("Time out")
             return None
 
@@ -113,10 +115,10 @@ class YoutubeWebscraper:
                 json_string = txt.read()
                 json_string = json_string.replace("\n", "")
                 titles_from_file = json.loads(json_string)
-        except json.decoder.JSONDecodeError as e:
+        except json.decoder.JSONDecodeError:
             print("JSON corrupted!")
             return
-        except OSError as e:
+        except OSError:
             print("\"titles.txt\" failed to load!")
             return
 
@@ -145,7 +147,7 @@ class YoutubeWebscraper:
     @staticmethod
     def get_youtuber_url(youtube_channel_name: str) -> str:
         """
-        Returns the videos url
+        Returns the videos url of a youtuber
         :param youtube_channel_name: channel name of a youtuber
         :return:
         """
@@ -164,6 +166,3 @@ class YoutubeWebscraper:
 
         self.save_page()
         self.driver.quit()
-
-
-YoutubeWebscraper().scrap_titles([Youtubers.tomscott, Youtubers.lemmino])
