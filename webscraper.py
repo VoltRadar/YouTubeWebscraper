@@ -1,5 +1,6 @@
 import datetime
 import json
+import time
 import traceback
 
 # All selenium imports
@@ -21,13 +22,22 @@ class YoutubeWebscraper:
     def __init__(self):
         self.driver: webdriver = None
 
-        self.youtuber_titles = []
-        self.youtuber = ""
+        # Dictionary of youtuber titles, keys are youtuber name, and values are a list of titles
+        self.titles = {}
+
+        # Have rejected cookies?
+        self.clicked_cookies = False
 
     def load_driver(self):
-        self.driver = webdriver.Firefox()
+        self.driver = webdriver.Chrome()
+        self.clicked_cookies = False
 
     def wait_for(self, location):
+        """
+        Wait for an element in a given location
+        :param location:
+        :return:
+        """
         try:
             element = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located(location)
@@ -42,7 +52,7 @@ class YoutubeWebscraper:
 
     def save_page(self):
         """Wait a bit and save the page. Used in debugging"""
-        self.driver.implicitly_wait(2)
+        time.sleep(2)
 
         with open("page.txt", "wb") as txt:
             txt.write(self.driver.page_source.encode())
@@ -50,24 +60,29 @@ class YoutubeWebscraper:
     def click_reject_all(self):
         """Rejects cookies from Youtube"""
 
+        if self.clicked_cookies:
+            # Already clicked cookies, searching for it causes a crash
+            return
+
         all_buttons = self.driver.find_elements(*Locations.buttons)
         reject_button = [b for b in all_buttons if "REJECT ALL" in b.text][0]
         reject_button.click()
 
-    def get_video_titles(self, youtubername):
+        self.clicked_cookies = True
+
+    def get_video_titles(self, youtuber_name):
         """
         Waits for the videos page for a given youtuber to load, then saves the
         video titles in the self.youtuber_titles list
 
-        :param youtubername: youtuber name
+        :param youtuber_name: youtuber name
         :return:
         """
 
         # Wait until a video title is found
         self.wait_for(Locations.titles)
 
-        # Wait 2 more seconds
-        self.driver.implicitly_wait(2)
+        time.sleep(2)
 
         all_title_elements = self.driver.find_elements(*Locations.titles)
 
@@ -77,14 +92,13 @@ class YoutubeWebscraper:
             try:
                 title = ele.text
             except StaleElementReferenceException:
-                # If title element doesn't exist anymore, then
+                # If title element doesn't exist anymore, then move on
                 continue
 
             if title:
                 titles.append(title)
 
-        self.youtuber_titles = titles
-        self.youtuber = youtubername
+        self.titles[youtuber_name] = titles
 
     def save_video_titles(self):
         """
@@ -98,7 +112,7 @@ class YoutubeWebscraper:
             with open("titles.txt", "r") as txt:
                 json_string = txt.read()
                 json_string = json_string.replace("\n", "")
-                titles = json.loads(json_string)
+                titles_from_file = json.loads(json_string)
         except json.decoder.JSONDecodeError as e:
             print("JSON corrupted!")
             return
@@ -106,34 +120,50 @@ class YoutubeWebscraper:
             print("\"titles.txt\" failed to load!")
             return
 
-        if self.youtuber in titles:
-            their_titles = titles[self.youtuber]
-        else:
-            their_titles = {}
-            titles[self.youtuber] = their_titles
-
         # Get the current timestamp
         current_time = datetime.datetime.now().replace(microsecond=0)
         time_stamp = current_time.isoformat()
 
-        their_titles[time_stamp] = self.youtuber_titles
+        for youtuber, youtuber_titles in self.titles.items():
+            if youtuber in titles_from_file:
+                # Loads all seen titles seen from a given youtuber before,
+                # with timestamps
+                their_titles_from_file = titles_from_file[youtuber]
+            else:
+                their_titles_from_file = {}
+                titles_from_file[youtuber] = their_titles_from_file
+
+            # Adds the currently seen titles
+            their_titles_from_file[time_stamp] = self.titles[youtuber]
+            titles_from_file[youtuber] = their_titles_from_file
 
         with open("titles.txt", "w") as txt:
-            json_string = json.dumps(titles)
+            json_string = json.dumps(titles_from_file)
             json_string = json_string.replace("{", "{\n").replace("}", "\n}\n")
             txt.write(json_string)
 
-    def scrap_titles(self, youtuber):
-        url = "https://www.youtube.com/@" + youtuber[1] + "/videos"
+    @staticmethod
+    def get_youtuber_url(youtube_channel_name: str) -> str:
+        """
+        Returns the videos url
+        :param youtube_channel_name: channel name of a youtuber
+        :return:
+        """
+        return "https://www.youtube.com/@" + youtube_channel_name + "/videos"
+
+    def scrap_titles(self, youtubers) -> None:
         self.load_driver()
 
-        self.load_page(url)
-        self.click_reject_all()
-        self.get_video_titles(youtuber[0])
+        for youtuber in youtubers:
+            url = self.get_youtuber_url(youtuber[1])
+            self.load_page(url)
+            self.click_reject_all()
+            self.get_video_titles(youtuber[0])
+
         self.save_video_titles()
 
         self.save_page()
         self.driver.quit()
 
 
-YoutubeWebscraper().scrap_titles(Youtubers.tomscott)
+YoutubeWebscraper().scrap_titles([Youtubers.tomscott, Youtubers.lemmino])
