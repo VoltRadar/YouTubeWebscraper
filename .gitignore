@@ -7,3 +7,7 @@ page.txt
 # Pycharm genrated files
 .idea
 __pycache__
+
+# Program spacific files
+YouTubers.txt
+titles.txt

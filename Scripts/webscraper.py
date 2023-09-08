@@ -12,9 +12,6 @@ from selenium.webdriver.support import expected_conditions as EC
 # Locations contains the locations for any elements on the YouTube page
 from Scripts.YoutubeLocations import Locations
 
-# Names of youtubers
-from Scripts.Youtubers import Youtubers
-
 
 class YoutubeWebscraper:
     """
@@ -29,6 +26,8 @@ class YoutubeWebscraper:
 
         # Have rejected cookies?
         self.clicked_cookies = False
+
+        self.youtubers = {}
 
     def load_driver(self):
         self.driver = webdriver.Chrome()
@@ -114,12 +113,21 @@ class YoutubeWebscraper:
             with open("titles.txt", "r") as txt:
                 json_string = txt.read()
                 json_string = json_string.replace("\n", "")
-                titles_from_file = json.loads(json_string)
-        except json.decoder.JSONDecodeError:
-            print("JSON corrupted!")
-            return
+                if not json_string:
+                    # If the file is empty
+                    titles_from_file = {}
+                else:
+                    titles_from_file = json.loads(json_string)
+        except json.decoder.JSONDecodeError as e:
+            raise json.decoder.JSONDecodeError(msg="Titles.txt corrupted",
+                                               doc=e.doc,
+                                               pos=e.pos)
         except OSError:
-            print("\"titles.txt\" failed to load!")
+            # No file called titles.txt, making a new file
+            _ = open("titles.txt", "w")
+
+            # rerun function
+            self.save_video_titles()
             return
 
         # Get the current timestamp
@@ -153,16 +161,78 @@ class YoutubeWebscraper:
         """
         return "https://www.youtube.com/@" + youtube_channel_name + "/videos"
 
-    def scrap_titles(self, youtubers) -> None:
+    def load_youtuber_names(self):
+        """
+        Loads the youtubers names from a file
+        :return: None
+        """
+        try:
+            with open("YouTubers.txt", "r") as txt:
+                self.youtubers = json.loads(txt.read())
+
+        except json.decoder.JSONDecodeError as e:
+            raise json.decoder.JSONDecodeError(msg="YouTubers.txt: " + e.msg,
+                                               doc=e.doc,
+                                               pos=e.pos)
+
+        except OSError:
+            # No YouTubers.txt file. Make a new one
+            _ = open("YouTubers.txt", "w")
+
+    def save_youtuber_names(self):
+        """Saves the self.youtubers dict"""
+
+        youtubers_json_string = json.dumps(self.youtubers)
+
+        # Make the file slightly easier to read
+        youtubers_json_string = youtubers_json_string.replace('",', '",\n')
+
+        with open("YouTubers.txt", "w") as txt:
+            txt.write(youtubers_json_string)
+
+    def add_youtuber(self, youtuber_name: str, youtuber_channel_name: str):
+        """
+        Raises ValueError if youtuber_name already exists in self.youtubers
+
+        Adds a youtuber to the self.youtubers dict.
+        If a YouTuber already has the same nickname,
+
+        The youtuber_name will be a nickname that the program will use to refer
+        to this youtuber e.g. "Tom Scott".
+
+        The youtuber_channel_name is the youtuber channel name, found in the
+        URL for their channel page. Tom Scott's URL is the following:
+        https://www.youtube.com/@TomScottGo
+        So in this case, their channel name should be "TomScottGo"
+
+        :param youtuber_name: Nick name for youtuber
+        :param youtuber_channel_name: name after @ symbol in channel URL
+        :return:
+        """
+        if youtuber_name in self.youtubers:
+            raise ValueError("YouTuber already exists")
+
+        self.youtubers[youtuber_name] = youtuber_channel_name
+
+    def scrap_titles(self) -> None:
+        self.load_youtuber_names()
+
+        self.add_youtuber("Tom Scott", "TomScottGo")
+        self.add_youtuber("Strange Eons", "STRANGEONS")
+
         self.load_driver()
 
-        for youtuber in youtubers:
-            url = self.get_youtuber_url(youtuber[1])
+        for name, channel_name in self.youtubers.items():
+            url = self.get_youtuber_url(channel_name)
             self.load_page(url)
             self.click_reject_all()
-            self.get_video_titles(youtuber[0])
+            self.get_video_titles(name)
 
         self.save_video_titles()
 
         self.save_page()
         self.driver.quit()
+
+    def test(self):
+        self.load_youtuber_names()
+        self.save_youtuber_names()
