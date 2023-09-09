@@ -1,5 +1,5 @@
 import os
-from Scripts.webscraper import YoutubeWebscraper
+from Scripts.interface import WebscraperInterface
 
 # Change the CWD to the Data folder
 
@@ -7,6 +7,5 @@ from Scripts.webscraper import YoutubeWebscraper
 if __name__ == "__main__":
     os.chdir("Data")
 
-    y = YoutubeWebscraper()
-    y.scrap_titles()
-    # GitHub testing
+    itr = WebscraperInterface()
+    itr.start()

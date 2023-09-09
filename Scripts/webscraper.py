@@ -119,16 +119,19 @@ class YoutubeWebscraper:
                 else:
                     titles_from_file = json.loads(json_string)
         except json.decoder.JSONDecodeError as e:
-            raise json.decoder.JSONDecodeError(msg="Titles.txt corrupted",
+            raise json.decoder.JSONDecodeError(msg="Titles.txt corrupted: " + e.msg,
                                                doc=e.doc,
                                                pos=e.pos)
         except OSError:
             # No file called titles.txt, making a new file
             _ = open("titles.txt", "w")
 
-            # rerun function
-            self.save_video_titles()
-            return
+            titles_from_file = {}
+
+        titles_type = type(titles_from_file)
+        if not isinstance(titles_type, dict):
+            raise TypeError("Expected titles.txt type to be dict, "
+                             f"but was type {titles_type.__name__}")
 
         # Get the current timestamp
         current_time = datetime.datetime.now().replace(microsecond=0)
@@ -171,13 +174,19 @@ class YoutubeWebscraper:
                 self.youtubers = json.loads(txt.read())
 
         except json.decoder.JSONDecodeError as e:
-            raise json.decoder.JSONDecodeError(msg="YouTubers.txt: " + e.msg,
+            raise json.decoder.JSONDecodeError(msg="YouTubers.txt corrupted: " + e.msg,
                                                doc=e.doc,
                                                pos=e.pos)
 
         except OSError:
             # No YouTubers.txt file. Make a new one
-            _ = open("YouTubers.txt", "w")
+            with open("YouTubers.txt", "w") as txt:
+                txt.write("{}")
+
+        youtubers_type = type(self.youtubers)
+        if not isinstance(youtubers_type, dict):
+            raise TypeError("Expected YouTubers.txt type to be dict, "
+                             f"but was type {youtubers_type.__name__}")
 
     def save_youtuber_names(self):
         """Saves the self.youtubers dict"""
@@ -192,7 +201,7 @@ class YoutubeWebscraper:
 
     def add_youtuber(self, youtuber_name: str, youtuber_channel_name: str):
         """
-        Raises ValueError if youtuber_name already exists in self.youtubers
+        Raises TypeError if youtuber_name already exists in self.youtubers
 
         Adds a youtuber to the self.youtubers dict.
         If a YouTuber already has the same nickname,
