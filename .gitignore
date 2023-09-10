@@ -8,6 +8,9 @@ page.txt
 .idea
 __pycache__
 
-# Program spacific files
+# Data files
 YouTubers.txt
 titles.txt
+
+# Personal
+githubtoken.txt
