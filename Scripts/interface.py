@@ -9,7 +9,7 @@ class WebscraperInterface:
     Provides a command line interface for the YoutubeWebscraper interface
     """
     def __init__(self):
-        self.scraper = YoutubeWebscraper()
+        self.scraper: YoutubeWebscraper = YoutubeWebscraper()
 
     @staticmethod
     def handle_json_error(exception: json.JSONDecodeError):
@@ -76,17 +76,7 @@ class WebscraperInterface:
             else:
                 print()
 
-    def get_youtuber_name_string(self, nickname="", channel_name=""):
-        """
-        Returns a string to describe a youtuber
-        If no nickname is given for the channel_name, then just the channel name is returned
-        If a nickname is given
-        :return: str to describe channel
-        """
-        if not nickname and not channel_name:
-            raise ValueError("Both inputs empty")
-
-        # TODO: Finish this function
+        print()
 
     def add_youtuber(self):
         """
@@ -94,24 +84,28 @@ class WebscraperInterface:
         :return:
         """
 
-        ask_for_channel_name = False
-        while ask_for_channel_name:
+        while True:
             print("Please enter the channel name for the YouTuber")
             print("It can be found in the URL of the channel page (https://www.youtube.com/@{ChannelName})")
             channel_name = input("> ")
 
-            # Check channel exists
-            request = requests.get(self.scraper.get_youtuber_url(channel_name))
+            print("Checking if this channel exists...")
 
-            if request.status_code != 200:
+            # Check channel exists
+            url = self.scraper.get_youtuber_url(channel_name)
+            self.scraper.load_page(url)
+
+            if "404 not found" in self.scraper.driver.title.lower():
                 print("Channel doesn't seem to exist")
-                print("Hit enter to try again, or type 'quit' then ")
+                print("Hit enter to try again, or type 'quit' then enter")
 
                 inp = input("> ")
                 if inp and inp[0].lower() == "q":
                     return
                 else:
                     continue
+            else:
+                print("It does!")
 
             print(f"Give a nickname to {channel_name} (You can leave this blank)")
             youtuber_name = input("> ")
@@ -119,11 +113,11 @@ class WebscraperInterface:
             if not youtuber_name:
                 youtuber_name = channel_name
 
+            self.scraper.add_youtuber(youtuber_name=youtuber_name,
+                                      youtuber_channel_name=channel_name)
 
-
-
-
-
+            print()
+            return
 
     def start(self):
         """
@@ -131,4 +125,11 @@ class WebscraperInterface:
         :return:
         """
         print("Welcome to the YouTube Webscaper!")
-        self.display_subscribed()
+        print()
+
+        self.scraper.load_driver(debug=False)
+
+        while True:
+            self.display_subscribed()
+            self.add_youtuber()
+

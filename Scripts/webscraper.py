@@ -8,6 +8,7 @@ from selenium import webdriver
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
 
 # Locations contains the locations for any elements on the YouTube page
 from Scripts.YoutubeLocations import Locations
@@ -29,8 +30,27 @@ class YoutubeWebscraper:
 
         self.youtubers = {}
 
-    def load_driver(self):
-        self.driver = webdriver.Chrome()
+    def __del__(self):
+        """
+        Quits the driver when this object is deleted
+        :return:
+        """
+        self.driver.quit()
+
+    def load_driver(self, debug=False):
+
+        # If the webdriver is already loaded, just exit
+        if self.driver is not None:
+            return
+
+        options = Options()
+
+        if not debug:
+            options.add_argument("--headless")
+            # options.add_argument("--disable-gpu")
+
+        self.driver = webdriver.Chrome(options=options)
+
         self.clicked_cookies = False
 
     def wait_for(self, location):
@@ -49,7 +69,13 @@ class YoutubeWebscraper:
             return None
 
     def load_page(self, url):
+        """
+        Load a page for YouTube, then click reject all if needed
+        :param url:
+        :return:
+        """
         self.driver.get(url)
+        self.click_reject_all()
 
     def save_page(self):
         """Wait a bit and save the page. Used in debugging"""
@@ -169,6 +195,11 @@ class YoutubeWebscraper:
         Loads the youtubers names from a file
         :return: None
         """
+
+        if self.youtubers:
+            # If YouTubers already loaded, then don't load them from the file
+            return
+
         try:
             with open("YouTubers.txt", "r") as txt:
                 self.youtubers = json.loads(txt.read())
@@ -183,10 +214,9 @@ class YoutubeWebscraper:
             with open("YouTubers.txt", "w") as txt:
                 txt.write("{}")
 
-        youtubers_type = type(self.youtubers)
-        if not isinstance(youtubers_type, dict):
+        if not isinstance(self.youtubers, dict):
             raise TypeError("Expected YouTubers.txt type to be dict, "
-                             f"but was type {youtubers_type.__name__}")
+                             f"but was type {type(self.youtubers).__name__}")
 
     def save_youtuber_names(self):
         """Saves the self.youtubers dict"""
@@ -225,9 +255,6 @@ class YoutubeWebscraper:
 
     def scrap_titles(self) -> None:
         self.load_youtuber_names()
-
-        self.add_youtuber("Tom Scott", "TomScottGo")
-        self.add_youtuber("Strange Eons", "STRANGEONS")
 
         self.load_driver()
 

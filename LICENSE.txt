@@ -1,10 +1,10 @@
-This project contains code from Selenium, under the following license:
+This project contains code from Selenium and Requests, under the following license:
 https://www.apache.org/licenses/LICENSE-2.0
 
-No modification to the Selenium code was done.
+No modification to the Selenium or Requests code was done.
 
 
-The "Derivative Work" of the selenium code is licensed under the following:
+The "Derivative Work"  is licensed under the following:
 
 MIT License
 
