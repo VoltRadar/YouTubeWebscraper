@@ -1,3 +1,5 @@
+# TODO: At the end of the project, is requests used?
+
 This project contains code from Selenium and Requests, under the following license:
 https://www.apache.org/licenses/LICENSE-2.0
 

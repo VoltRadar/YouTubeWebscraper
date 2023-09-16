@@ -1,11 +1,10 @@
 import datetime
 import json
-import os
 import time
 
 # All selenium imports
 from selenium import webdriver
-from selenium.common.exceptions import StaleElementReferenceException
+from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
@@ -20,7 +19,7 @@ class YoutubeWebscraper:
     """
     def __init__(self):
 
-        self.driver: webdriver = None
+        self.driver: webdriver.Chrome = None
 
         # Dictionary of youtuber titles, keys are youtuber name, and values are a list of titles
         self.titles = {}
@@ -64,7 +63,7 @@ class YoutubeWebscraper:
                 EC.presence_of_element_located(location)
             )
             return element
-        except TimeoutError:
+        except TimeoutException:
             print("Time out")
             return None
 
@@ -102,12 +101,22 @@ class YoutubeWebscraper:
         Waits for the videos page for a given youtuber to load, then saves the
         video titles in the self.youtuber_titles list
 
+        returns None if there is no error
+        Returns
+
         :param youtuber_name: youtuber name
-        :return:
+        :return: Exception: Selenium TimeoutException if timeout error, or None if no error
         """
 
+        # Loads the video page
+        channel_name = self.youtubers[youtuber_name]
+        self.load_page(self.get_youtuber_url(channel_name))
+
         # Wait until a video title is found
-        self.wait_for(Locations.titles)
+        titles = self.wait_for(Locations.titles)
+
+        if titles is None:
+            return TimeoutException()
 
         time.sleep(2)
 
@@ -150,14 +159,15 @@ class YoutubeWebscraper:
                                                pos=e.pos)
         except OSError:
             # No file called titles.txt, making a new file
-            _ = open("titles.txt", "w")
+            f = open("titles.txt", "w")
+            f.close()
 
             titles_from_file = {}
 
         titles_type = type(titles_from_file)
-        if not isinstance(titles_type, dict):
+        if titles_type is not dict:
             raise TypeError("Expected titles.txt type to be dict, "
-                             f"but was type {titles_type.__name__}")
+                            f"but was type {titles_type.__name__}")
 
         # Get the current timestamp
         current_time = datetime.datetime.now().replace(microsecond=0)

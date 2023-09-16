@@ -9,8 +9,7 @@ page.txt
 __pycache__
 
 # Data files
-YouTubers.txt
-titles.txt
+Data/*
 
 # Personal
 githubtoken.txt

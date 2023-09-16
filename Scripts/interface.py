@@ -1,5 +1,6 @@
 import json
-import requests
+
+from selenium.common.exceptions import TimeoutException
 
 from Scripts.webscraper import YoutubeWebscraper
 
@@ -80,7 +81,7 @@ class WebscraperInterface:
 
     def add_youtuber(self):
         """
-        Displays prompts to add a youtuber to track
+        Displays prompts to add a youtuber to tracked YouTubers
         :return:
         """
 
@@ -119,6 +120,34 @@ class WebscraperInterface:
             print()
             return
 
+    def get_titles(self):
+        """
+        Gets titles of all the tracked YouTubers and saves them to a file
+        :return:
+        """
+
+        if not self.scraper.youtubers:
+            print("No tracked YouTubers")
+            return
+
+        numb_of_youtubers = len(self.scraper.youtubers)
+
+        for index, nickname in enumerate(self.scraper.youtubers.keys()):
+            print(f"({index + 1}/{numb_of_youtubers}) "
+                  f"Getting {nickname}'s videos... ", end="")
+
+            error = self.scraper.get_video_titles(nickname)
+            if error:
+                print("Time out Error!")
+                print(f"For some reason {self.scraper.driver.current_url} didn't have any titles")
+                print("Is you're internet connected?")
+                return
+
+            numb_of_videos_found = len(self.scraper.titles[nickname])
+            print(f"Found {numb_of_videos_found} videos")
+
+        self.scraper.save_video_titles()
+
     def start(self):
         """
         Starts the interface
@@ -129,7 +158,9 @@ class WebscraperInterface:
 
         self.scraper.load_driver(debug=False)
 
-        while True:
-            self.display_subscribed()
-            self.add_youtuber()
+        print("Loaded driver")
+        print()
+        self.scraper.load_youtuber_names()
 
+        self.get_titles()
+        pass
